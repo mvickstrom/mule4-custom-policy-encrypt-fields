@@ -18,7 +18,7 @@ configuration:
     defaultValue: ssn,dob
   - propertyName: password
     name: Secret for Password Based Encryption
-    description: Password used to decrypt the selected fields
+    description: Password used to encrypt the selected fields
     type: string
     optional: false
     sensitive: true

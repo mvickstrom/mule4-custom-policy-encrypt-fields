@@ -6,7 +6,7 @@
 
     <groupId>7ef10810-fecb-4c4d-a5fe-87db9f17f264</groupId>
     <artifactId>encrypt-fields-policy</artifactId>
-    <version>1.0.11</version>
+    <version>1.0.12</version>
 
     <name>Encrypt Fields Policy</name>
     <description>Encrypts the values of the specified fields of the outcoming payload</description>
