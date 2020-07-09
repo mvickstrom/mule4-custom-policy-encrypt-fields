@@ -36,6 +36,11 @@ A custom policy in Mule 4 which will encrypt the value of the configured fields.
 
 I followed [this](https://docs.mulesoft.com/api-manager/2.x/custom-policy-getting-started) guide to build out the archetype for the Mule 4 custom policy. 
 
+## decrypt-fields-policy
+A custom policy in Mule 4 which will decrypt the value of the configured fields. The policy has 2 input parameters, a comma separated list of fields which should have their values decrypted and a password which is used to decrypt those values. In it's current implementation the policy expects a single object with the keys to be decrypted at the root level of the object. 
+
+This policy is essentially the reverse of the encrypt-fields-policy. It would be applied to an API which needed to consume PII from a endpoint protected by the encrypt-fields-policy. 
+
 ## employees_api
 A simple API which has one resource to get information about an Employee by their Id. The example querries a database and returns the first result which matches the Id URI parameter. The payload of this API has a social security number (ssn) field and a date of birth (dob) fields which represent the PII we are trying to prevent from being exposed unintentionally.
 
