@@ -1,0 +1,89 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mule
+  xmlns:core="http://www.mulesoft.org/schema/mule/core"
+  xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core"
+  xmlns="http://www.mulesoft.org/schema/mule/core"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xmlns:http-policy="http://www.mulesoft.org/schema/mule/http-policy"
+  xmlns:crypto="http://www.mulesoft.org/schema/mule/crypto"
+  xmlns:http-transform="http://www.mulesoft.org/schema/mule/http-policy-transform"
+  xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+    http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd
+    http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+    http://www.mulesoft.org/schema/mule/http-policy http://www.mulesoft.org/schema/mule/http-policy/current/mule-http-policy.xsd
+    http://www.mulesoft.org/schema/mule/crypto http://www.mulesoft.org/schema/mule/crypto/current/mule-crypto.xsd
+    http://www.mulesoft.org/schema/mule/http-policy-transform http://www.mulesoft.org/schema/mule/http-policy-transform/current/mule-http-policy-transform.xsd">
+
+  <http-policy:proxy name="{{{policyId}}}-custom-policy">
+    <http-policy:operation propagateMessageTransformations="true">
+      <try>
+        <set-variable variableName="decryptSelectorsList" value="{{{ decryptingSelectorsList }}}" mimeType="application/java"/>
+        <logger level="INFO" message="#[vars.decryptSelectorsList]" />
+        <http-policy:execute-next/>
+          <ee:transform>
+            <ee:message></ee:message>
+            <ee:variables>
+              <ee:set-variable variableName="decryptedPayload">
+                <![CDATA[%dw 2.0
+                  output application/java
+                  ---
+                  payload
+                  ]]>
+              </ee:set-variable>
+            </ee:variables>
+          </ee:transform>
+        <foreach collection="#[vars.decryptSelectorsList replace /[\[\]\s]/ with ('') splitBy ',']">
+          <set-variable value="#[payload]" variableName="key"/>
+          <logger level="INFO" message="#[vars.key]" />
+          <crypto:jce-decrypt-pbe password="{{{password}}}" outputMimeType="application/json" outputEncoding="UTF-8">
+            <crypto:content >
+              <![CDATA[#[%dw 2.0
+                import * from dw::core::Binaries
+                output application/octet-stream
+                ---
+                fromBase64((vars.decryptedPayload[vars.key]) as String) as Binary]]]>
+            </crypto:content>
+          </crypto:jce-decrypt-pbe>
+          <logger level="INFO" message="#[payload]" />
+          <ee:transform>
+            <ee:message></ee:message>
+            <ee:variables>
+              <ee:set-variable variableName="decryptedPayload">
+                <![CDATA[%dw 2.0
+                  output application/json
+                  ---
+                  vars.decryptedPayload - "$(vars.key)" ++ {"$(vars.key)": payload}]]>
+              </ee:set-variable>
+            </ee:variables>
+          </ee:transform>
+        </foreach>
+        <ee:transform >
+          <ee:message >
+            <ee:set-payload >
+              <![CDATA[%dw 2.0
+                output application/json
+                ---
+                vars.decryptedPayload]]>
+            </ee:set-payload>
+          </ee:message>
+        </ee:transform>
+        <error-handler>
+          <on-error-propagate logException="true">
+            <http-transform:set-response statusCode="500">
+              <http-transform:body>#[
+                {{#if isWsdlEndpoint}}
+                  output application/xml --- Soap::clientErrorMessage(payload, '$(error.description)')
+                {{else}}
+                  output application/json --- {"error": "$(error.description)"}
+                {{/if}}
+                ]
+              </http-transform:body>
+            </http-transform:set-response>
+          </on-error-propagate>
+        </error-handler>
+      </try>
+    </http-policy:operation>
+
+  </http-policy:proxy>
+
+</mule>

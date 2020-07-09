@@ -1,0 +1,87 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" xmlns:crypto="http://www.mulesoft.org/schema/mule/crypto"
+	xmlns="http://www.mulesoft.org/schema/mule/core"
+	xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/crypto http://www.mulesoft.org/schema/mule/crypto/current/mule-crypto.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd">
+	<flow name="encrypt-testFlow" doc:id="1cfa24f9-bbd5-45bd-a73d-58fc7e03436d" >
+		<scheduler doc:name="Scheduler" doc:id="e7b0cbbb-40b3-4349-906c-b943efa70ece" >
+			<scheduling-strategy >
+				<fixed-frequency timeUnit="MINUTES"/>
+			</scheduling-strategy>
+		</scheduler>
+		<set-variable value='#[%dw 2.0
+output application/json
+---
+["ssn", "dob"]]' doc:name="Set encryptSelectorsList to encrypt SSN and DOB" doc:id="5d5c3f0d-1a7f-4eb3-aeca-54ceab220b0b" variableName="encryptSelectorsList"/>
+		<set-payload value='#[%dw 2.0
+output aplication/json
+---
+{
+  "userID": "ABC1234567",
+  "channel": "email",
+  "ssn": "123-12-3123",
+  "dob": "1978-03-04",
+  "subscriberKey": "0033600001az9j9AAA",
+  "emailAddress": "cthorborg@salesforce.com",
+  "sentDate": "2020-05-17T17:45:00-03:00"
+}]' doc:name="Set Example Payload" doc:id="d18ffb19-9d90-4305-8e25-d670ecfec844" />
+		<set-variable value="#[payload]" doc:name="Create Variable to Hold Payload with Encrypted Values" doc:id="5cd934a5-feb7-4cc7-82e0-64ce114c9138" variableName="encryptedPayload"/>
+		<foreach doc:name="For Each Key in encryptSelectorsList" doc:id="f951ac44-e2df-461c-84f5-bd58806f95f1" collection="#[vars.encryptSelectorsList]">
+			<set-variable value="#[payload]" doc:name="Store key variable" doc:id="94e2498b-5435-4fba-ba53-4978a71bb661" variableName="key" />
+			<crypto:jce-encrypt-pbe doc:name="Encrypt Value of that Field using Password Based Encryption" doc:id="e57bec7a-c769-42ad-92ec-d278d3d92e2c" password="Mulesoft123!">
+				<crypto:content ><![CDATA[#[%dw 2.0 
+output application/json
+--- 
+vars.encryptedPayload[vars.key]]]]></crypto:content>
+			</crypto:jce-encrypt-pbe>
+			<ee:transform doc:name="Replace unencrypted value with encrypted value" doc:id="01c33e12-e93b-4839-953f-8496f6fb0fcc" >
+				<ee:message >
+				</ee:message>
+				<ee:variables >
+					<ee:set-variable variableName="encryptedPayload" ><![CDATA[%dw 2.0
+import * from dw::core::Binaries
+output application/json
+---
+vars.encryptedPayload - "$(vars.key)" ++ {"$(vars.key)": toBase64(payload as Binary)}]]></ee:set-variable>
+				</ee:variables>
+			</ee:transform>
+		</foreach>
+		<logger level="INFO" doc:name="Logger" doc:id="67a8ec3d-7a01-46cb-9cb7-d823dc70399c" message="#[vars.encryptedPayload]"/>
+		<ee:transform doc:name="Create Variable to Hold Payload with Decrypted Value" doc:id="ed1d097a-f8bc-4a94-bcc1-7e893d6a353b" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/java
+---
+vars.encryptedPayload]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<foreach doc:name="Copy_of_For Each" doc:id="affa6923-e369-4f44-bce0-0423b8b50855" collection="#[vars.encryptSelectorsList]">
+			<set-variable value="#[payload]" doc:name="Store key variable" doc:id="be7bfe41-3e97-4e9d-a4f3-550e080f7d21" variableName="key" mimeType="application/json" />
+			<crypto:jce-decrypt-pbe doc:name="Decrypt Value of the field using PBE" doc:id="1461f273-8cd0-4145-98b6-0210cd5f6687" password="Mulesoft123!" outputMimeType="application/json" outputEncoding="UTF-8">
+				<crypto:content ><![CDATA[#[%dw 2.0
+import * from dw::core::Binaries
+output application/octet-stream
+---
+fromBase64((vars.encryptedPayload[vars.key]) as String) as Binary]]]></crypto:content>
+			</crypto:jce-decrypt-pbe>
+			<ee:transform doc:name="Replace encrypted value with plain text" doc:id="86f19e2b-14e3-47c1-8146-5aa8616526d0">
+					<ee:message>
+					</ee:message>
+					<ee:variables>
+					<ee:set-variable variableName="rootMessage" ><![CDATA[%dw 2.0
+output application/json
+---
+{
+}]]></ee:set-variable>
+					<ee:set-variable variableName="encryptedPayload" ><![CDATA[%dw 2.0
+output application/json
+---
+vars.encryptedPayload - "$(vars.key)" ++ {"$(vars.key)": payload}]]></ee:set-variable>
+					</ee:variables>
+				</ee:transform>
+			</foreach>
+		<logger level="INFO" doc:name="Logger" doc:id="252d7688-300b-436a-8016-63f15cfae754" message="#[vars.encryptedPayload]"/>
+	</flow>
+</mule>

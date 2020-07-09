@@ -1,0 +1,26 @@
+id: Decrypt Fields Policy
+name: Decrypt Fields Policy
+description: Decrypt the specified fields
+category: Custom
+type: custom
+resourceLevelSupported: true
+encryptionSupported: false
+standalone: true
+requiredCharacteristics: []
+providedCharacteristics: []
+configuration:
+  - propertyName: decryptingSelectorsList
+    name: List of selectors
+    description: List of fields to be decrypted, comma separated
+    type: string
+    allowMultiple: true
+    optional: false
+    defaultValue: ssn,dob
+  - propertyName: password
+    name: Secret for Password Based Encryption
+    description: Password used to decrypt the selected fields
+    type: string
+    optional: false
+    sensitive: true
+    allowMultiple: false
+    defaultValue: ""

@@ -1,0 +1,82 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mule
+	xmlns:core="http://www.mulesoft.org/schema/mule/core" xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core"
+	xmlns="http://www.mulesoft.org/schema/mule/core"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xmlns:http-policy="http://www.mulesoft.org/schema/mule/http-policy"
+  xmlns:crypto="http://www.mulesoft.org/schema/mule/crypto"
+	xmlns:http-transform="http://www.mulesoft.org/schema/mule/http-policy-transform"
+  xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+    http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd
+    http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+    http://www.mulesoft.org/schema/mule/http-policy http://www.mulesoft.org/schema/mule/http-policy/current/mule-http-policy.xsd
+    http://www.mulesoft.org/schema/mule/crypto http://www.mulesoft.org/schema/mule/crypto/current/mule-crypto.xsd
+    http://www.mulesoft.org/schema/mule/http-policy-transform http://www.mulesoft.org/schema/mule/http-policy-transform/current/mule-http-policy-transform.xsd">
+
+               <http-policy:proxy name="{{{policyId}}}-custom-policy">
+               		<http-policy:source>
+               		<try>
+               				<set-variable variableName="encryptSelectorsList"
+               					value="{{{ encryptingSelectorsList }}}" mimeType="application/java" />
+               				<logger level="INFO" message="#[vars.encryptSelectorsList]" />
+
+
+               				<http-policy:execute-next />
+                      <set-variable variableName="encryptedPayload"
+                        value="#[payload]" mimeType="application/json" />
+                      <foreach collection="#[vars.encryptSelectorsList replace /[\[\]\s]/ with ('') splitBy ',']">
+                        <set-variable value="#[payload]"  variableName="key"/>
+                        <crypto:jce-encrypt-pbe  password="{{{password}}}">
+                          <crypto:content ><![CDATA[#[%dw 2.0
+                            output application/json
+                            ---
+                            vars.encryptedPayload[vars.key]]]]>
+                          </crypto:content>
+                        </crypto:jce-encrypt-pbe>
+                        <ee:transform >
+                          <ee:message >
+                          </ee:message>
+                          <ee:variables >
+                            <ee:set-variable variableName="encryptedPayload" ><![CDATA[%dw 2.0
+                              import * from dw::core::Binaries
+                              output application/json
+                              ---
+                              vars.encryptedPayload - "$(vars.key)" ++ {"$(vars.key)": toBase64(payload as Binary)}]]>
+                            </ee:set-variable>
+                          </ee:variables>
+                        </ee:transform>
+                      </foreach>
+                      <ee:transform >
+                            <ee:message >
+                              <ee:set-payload ><![CDATA[%dw 2.0
+                                output application/json
+                                ---
+                                vars.encryptedPayload]]>
+                              </ee:set-payload>
+                          </ee:message>
+                      </ee:transform>
+
+               				<error-handler>
+               					<on-error-propagate logException="true">
+               						<http-transform:set-response
+               							statusCode="500">
+               							<http-transform:body>#[
+               								{{#if isWsdlEndpoint}}
+               								output
+               								application/xml --- Soap::clientErrorMessage(payload,
+               								'$(error.description)')
+               								{{else}}
+               								output application/json ---
+               								{"error": "$(error.description)"}
+               								{{/if}}
+               								]
+               							</http-transform:body>
+               						</http-transform:set-response>
+               					</on-error-propagate>
+               				</error-handler>
+               			</try>
+               		</http-policy:source>
+
+               	</http-policy:proxy>
+
+               </mule>
