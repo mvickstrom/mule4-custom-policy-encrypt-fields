@@ -6,7 +6,33 @@ This project demonstrates how to leverage Custom Policies in the MuleSoft Anypoi
 In this project are 2 APIs, 1 mule application and 2 custom policies. Below is an outline of each:
 
 ## encrypt-fields-policy
-A custom policy in Mule 4 which has 2 input parameters, a list of 
+A custom policy in Mule 4 which will encrypt the value of the configured fields. The policy has 2 input parameters, a comma separated list of fields which should have their values encrypted and a password which is used to encrypt those values. In it's current implementation the policy expects a single object with the keys to be encrypted at the root level of the object. 
+
+### Sample Input Payload 
+```
+{
+  "userID": "2",
+  "channel": "email",
+  "ssn": "123-12-3123",
+  "dob": "1978-03-04",
+  "subscriberKey": "0033600001az9j9AAA",
+  "emailAddress": "cthorborg@salesforce.com",
+  "sentDate": "2020-05-17T17:45:00-03:00"
+}
+```
+
+### Sample Encrypted Payload with "ssn, dob" fields selected
+```
+{
+  "userID": "2",
+  "channel": "email",
+  "subscriberKey": "0033600001az9j9AAA",
+  "emailAddress": "cthorborg@salesforce.com",
+  "sentDate": "2020-05-17T17:45:00-03:00",
+  "ssn": "yaEcVjU8m0VZxlhLBydHfQ==",
+  "dob": "EBf+6ccOqELyDvx8ske4Kg=="
+}
+```
 
 ## employees_api
 A simple API which has one resource to get information about an Employee by their Id. The example querries a database and returns the first result which matches the Id URI parameter. The payload of this API has a social security number (ssn) field and a date of birth (dob) fields which represent the PII we are trying to prevent from being exposed unintentionally.
