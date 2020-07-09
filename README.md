@@ -3,10 +3,14 @@ A custom policy for mule 4 which enrypts specific fields in a payload
 
 This project demonstrates how to leverage Custom Policies in the MuleSoft Anypoint API Manager platform to secure information in an APIs payload such as Personally Identifiable Information (PII).
 
-In this project are 2 APIs, 1 mule application and 2 custom policies. Below is an outline of each:
+In this project there are 2 APIs, 1 mule application and 2 custom policies. 
+
+Below is an outline of each:
 
 ## encrypt-fields-policy
 A custom policy in Mule 4 which will encrypt the value of the configured fields. The policy has 2 input parameters, a comma separated list of fields which should have their values encrypted and a password which is used to encrypt those values. In it's current implementation the policy expects a single object with the keys to be encrypted at the root level of the object. 
+
+![Sample Policy Configuration](/images/image1.png)
 
 ### Sample Input Payload 
 ```
@@ -34,10 +38,12 @@ A custom policy in Mule 4 which will encrypt the value of the configured fields.
 }
 ```
 
-I followed [this](https://docs.mulesoft.com/api-manager/2.x/custom-policy-getting-started) guide to build out the archetype for the Mule 4 custom policy. 
+I followed [this](https://docs.mulesoft.com/api-manager/2.x/custom-policy-getting-started) guide to build out the archetype for the Mule 4 custom policy and then published it to my organizations Anypoint Exchange. 
 
 ## decrypt-fields-policy
 A custom policy in Mule 4 which will decrypt the value of the configured fields. The policy has 2 input parameters, a comma separated list of fields which should have their values decrypted and a password which is used to decrypt those values. In it's current implementation the policy expects a single object with the keys to be decrypted at the root level of the object. 
+
+This policy is set to do decryption on the returned payload of an outgoing HTTP request. It is set to propagate transformations to the Mule message which is not the default. This allows us to modify the payload returned by an outgoing HTTP request to an API which is protected by the encrypt policy and return an unencrypted payload to the API which this policy is applied to. For more information on Outgoing policies and mule message propogation please refer to the MuleSoft documentation [here](https://docs.mulesoft.com/api-manager/2.x/custom-policy-4-reference#outbound-policies)
 
 This policy is essentially the reverse of the encrypt-fields-policy. It would be applied to an API which needed to consume PII from a endpoint protected by the encrypt-fields-policy. 
 
